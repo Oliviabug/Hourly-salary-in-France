@@ -209,7 +209,7 @@
                                                        .style('margin', 'auto')
                                                        .style('margin-top', '2rem')
                                                        .style('font-family', 'Helvetica')
-                                                       .html('The average hourly wage in ' + '<br>' + '<strong>' + regions.attr('label-region') + '</strong>' + ' is:' + "<br>" + '€' + '<strong>' + regions.attr('data-value') + '</strong>' )
+                                                       .html( '<strong>' + regions.attr('label-region') + '</strong>' + '<br>' + '€' + '<strong>' + regions.attr('data-value') + '</strong>' + ' per hour')
 
                                                   })
                              .on("mouseout", function(d) {
