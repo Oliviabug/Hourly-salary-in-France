@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.7.1/d3-tip.js'> </script>
+    <title>D3 dashboard</title>
+    <style>
+
+    body {
+      background-color: #fff1e5;
+    }
+
+    p {
+      margin-top: -.2em;
+      margin: auto;
+      text-align: center;
+    }
+
+    .flex-container {
+      display: flex;
+    }
+
+    #map {
+      flex: 0 0 45%;
+    }
+
+    #barchart_linechart {
+      flex: 0 0 45%;
+    }
+
+    #lineChartTitle2 {
+      opacity: 1;
+    }
+
+    .main_title {
+      font-family: Helvetica;
+      margin: auto;
+      text-align: center;
+    }
+
+
+    </style>
+  </head>
+  <body>
+
+    <h1 class='main_title'>
+      CLICK A FRENCH REGION TO SEE DATA ON THE HOURLY WAGE
+    </h1>
+
+    <div class='flex-container'>
+
+    <div id='map'>
+    </div>
+
+    <div id='barchart_linechart'>
+
+      <div id='barchart'>
+      </div>
+      <div id='linechart'>
+      </div>
+
+      <div id='barchart_2'>
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+    <script>
+
+    var color;
+    // var percentageFormat = d3.format("%");
+    // var f = d3.format(".1f");
+
+    function initialMap() {
+
+      d3.json('regions.geojson', function(json) {
+
+        // console.log(json);
+
+        d3.csv("salaire-moyen-carte.csv", function(data) {
+
+          data.forEach(function(d) {
+            d.salairemoyen = +d.salairemoyen;
+            // console.log(d);
+          });
+
+          var color = d3.scaleQuantize()
+                        // .range(['#f0f9e8', '#7bccc4', '#bae4bc', "#7bccc4", '#43a2ca', "#0868ac" ]);
+                        // .range(['#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#d73027', , '#fee090' , , '#fdae61', '#ffffbf', '#f46d43' ]) '#fff5eb',
+                        .range([ '#fee8c8', '#fdd0a2', '#fdae6b', '#fd8d3c', '#f16913', '#d94801', '#a63603', '#7f2704' ]);
+
+
+
+
+          // console.log(color);
+
+          var 	width = 700,
+  		          height = 550;
+
+          var margin = {
+            top: 0,
+            right: 10,
+            left: 10,
+            bottom: 10
+          };
+
+        width = width - margin.right - margin.left;
+        height = height - margin.top - margin.bottom;
+
+
+          var vis = d3.select("#map")
+              	     .append("svg:svg")              //create the SVG element inside the <body>
+              	     .data(data)                   //associate our data with the document
+              	         .attr("width", width)           //set the width and height of our visualization (these will be attributes of the <svg> tag
+              	         .attr("height", height)
+                        // ppend("svg:g")                //make a group to hold our pie chart
+              	      //    .attr("transform", "translate(" + outerRadius + "," + outerRadius + ")")    //move the center of the pie chart from 0, 0 to radius, radius
+              				// ;
+
+          var projection = d3.geoMercator().scale(2000).translate([width/3, height*3.6]);;
+
+          var path = d3.geoPath().projection(projection);
+
+          var g = vis.append("g")
+          .attr("transform", "translate(0,180)");
+
+          var x = d3.scaleLinear()
+          .domain([1, 5])
+          .rangeRound([220, 980]);
+
+
+          color.domain([d3.min(data, function(d) { return d.salairemoyen;}),
+                        d3.max(data, function(d) { return d.salairemoyen;})
+                      ]);
+
+
+
+          for (var i = 0; i < data.length; i++) {
+            var dataRegion = data[i].Region;
+
+            var dataValue = data[i].salairemoyen;
+
+            for(var j = 0; j < json.features.length; j++) {
+
+              var jsonRegion = json.features[j].properties.nom;
+
+              // console.log(json.features)
+              //
+              // console.log(jsonRegion)
+
+              if (dataRegion == jsonRegion) {
+                json.features[j].properties.value = dataValue;
+
+
+                break;
+              }
+            }
+          };
+
+
+          var regions = g.selectAll('path')
+                            .data(json.features)
+                            .enter()
+                            .append('path')
+                            .attr('id', function(d, i) { return d.properties.nom})
+                            .attr('label-region', function(d, i) { return d.properties.nom})
+                            .attr('data-centre-x', function(d){ return path.centroid(d)[0]; })
+                            .attr('data-centre-y', function(d){ return path.centroid(d)[1]; })
+                            .attr('class', 'countries')
+                            .style('fill', function(d) {
+                              console.log(d.properties.value)
+                              console.log(d.properties.nom)
+                              var value = d.properties.value;
+
+                              if(value) {
+                                return color(value);
+                              } else {
+                                return '#ccc';
+                              }
+                            })
+                            .attr('data-value', function(d) { return d.properties.value})
+                            .attr('stroke', 'black')
+                            .attr('stroke-width', '0.5px')
+                            .attr("d", path)
+
+                            .on("mouseover", function(d, i) {
+                                          var regions = d3.select(this)
+
+                                          regions
+                                              .attr('stroke-width', '2px')
+
+                                          var div = d3.select("#map").append("div")
+                                                       .attr('class', 'div_salary')
+                                                       .attr('position', 'absolute')
+                                                       .attr('pointer-events', 'none')
+                                                       .attr("class", "regions")
+                                                       .style("opacity", 1)
+                                                       .style('font-size', '1.5rem')
+                                                      //  .style('border', 'solid 1px black')
+                                                      //  .style('background-color', 'lightGrey')
+                                                       .style('text-align', 'center')
+                                                       .style('width', '25vw')
+                                                       .style('margin', 'auto')
+                                                       .style('margin-top', '2rem')
+                                                       .style('font-family', 'Helvetica')
+                                                       .html('The average hourly wage in ' + '<br>' + '<strong>' + regions.attr('label-region') + '</strong>' + ' is:' + "<br>" + '€' + '<strong>' + regions.attr('data-value') + '</strong>' )
+
+                                                  })
+                             .on("mouseout", function(d) {
+                                        d3.select(this)
+                                        d3.select('#map').selectAll(".regions")
+                                           .remove()
+
+                                        d3.select(this)
+                                               .attr('stroke-width', '.5px')
+
+                                      })
+                            .on('click', up)
+
+        // vis.append("svg:text")
+    	  //    	.attr("dy", "1em")
+        //     .attr("dx", '9.5em')
+    	  //     .attr("text-anchor", "middle")
+    	  //     .text("Hourly wage in France")
+    	  //     .attr("class","title")
+        //     .style('font-family', 'Helvetica')
+        //     .style('font-size', '2rem')
+    	  //     ;
+
+            function up(d, i) {
+
+                /* update bar chart when user selects one region on the map */
+                updateBarChart(d.properties.nom, color(d.properties.value));
+                updateLineChart(d.properties.nom, color(d.properties.value));
+                updateBarChart_2(d.properties.nom, color(d.properties.value));
+
+          }
+
+    });
+
+  });
+
+
+
+  };
+
+  initialMap();
+
+  /*
+############# BAR CHART ###################
+-------------------------------------------
+*/
+var Age_salary_data = [
+  {Region: 'Ile-de-France', Age: '18-25', salaryhours: 10.5},
+  {Region: 'Ile-de-France', Age: '26-50', salaryhours: 18.0},
+  {Region: 'Ile-de-France', Age: '>50', salaryhours: 22.7},
+  {Region: 'Centre-Val de Loire', Age: '18-25', salaryhours: 9.6},
+  {Region: 'Centre-Val de Loire', Age: '26-50', salaryhours: 13.3},
+  {Region: 'Centre-Val de Loire', Age: '>50', salaryhours: 15.5},
+  {Region: 'Bourgogne-Franche-Comte', Age: '18-25', salaryhours: 9.5},
+  {Region: 'Bourgogne-Franche-Comte', Age: '26-50', salaryhours: 12.8},
+  {Region: 'Bourgogne-Franche-Comte', Age: '>50', salaryhours: 14.8},
+  {Region: 'Normandie', Age: '18-25', salaryhours: 9.6},
+  {Region: 'Normandie', Age: '26-50', salaryhours: 13.2},
+  {Region: 'Normandie', Age: '>50', salaryhours: 15.5},
+  {Region: 'Hauts-de-France', Age: '18-25', salaryhours: 9.6},
+  {Region: 'Hauts-de-France', Age: '26-50', salaryhours: 13.3},
+  {Region: 'Hauts-de-France', Age: '>50', salaryhours: 15.6},
+  {Region: 'Grand Est', Age: '18-25', salaryhours: 9.5},
+  {Region: 'Grand Est', Age: '26-50', salaryhours: 13.1},
+  {Region: 'Grand Est', Age: '>50', salaryhours: 15.4},
+  {Region: 'Pays de la Loire', Age: '18-25', salaryhours: 9.4},
+  {Region: 'Pays de la Loire', Age: '26-50', salaryhours: 13.0},
+  {Region: 'Pays de la Loire', Age: '>50', salaryhours: 15.1},
+  {Region: 'Bretagne', Age: '18-25', salaryhours: 9.4},
+  {Region: 'Bretagne', Age: '26-50', salaryhours: 12.8},
+  {Region: 'Bretagne', Age: '>50', salaryhours: 14.9},
+  {Region: 'Nouvelle-Aquitaine', Age: '18-25', salaryhours: 9.4},
+  {Region: 'Nouvelle-Aquitaine', Age: '26-50', salaryhours: 12.9},
+  {Region: 'Nouvelle-Aquitaine', Age: '>50', salaryhours: 15.2},
+  {Region: 'Guadeloupe', Age: '18-25', salaryhours: 9.0},
+  {Region: 'Guadeloupe', Age: '26-50', salaryhours: 13.3},
+  {Region: 'Guadeloupe', Age: '>50', salaryhours: 16.3},
+  {Region: 'Martinique', Age: '18-25', salaryhours: 9.1},
+  {Region: 'Martinique', Age: '26-50', salaryhours: 13.2},
+  {Region: 'Martinique', Age: '>50', salaryhours: 13.2},
+  {Region: 'Guyane', Age: '18-25', salaryhours: 9.5},
+  {Region: 'Guyane', Age: '26-50', salaryhours: 14.0},
+  {Region: 'Guyane', Age: '>50', salaryhours: 18.3},
+  {Region: 'Reunion', Age: '18-25', salaryhours: 8.8},
+  {Region: 'Reunion', Age: '26-50', salaryhours: 12.7},
+  {Region: 'Reunion', Age: '>50', salaryhours: 15.8},
+  {Region: 'Mayotte', Age: '18-25', salaryhours: null},
+  {Region: 'Mayotte', Age: '26-50', salaryhours: null},
+  {Region: 'Mayotte', Age: '>50', salaryhours: null},
+  {Region: 'Occitanie', Age: '18-25', salaryhours: 9.4},
+  {Region: 'Occitanie', Age: '26-50', salaryhours: 13.3},
+  {Region: 'Occitanie', Age: '>50', salaryhours: 16.0},
+  {Region: 'Auvergne-Rhone-Alpes', Age: '18-25', salaryhours: 9.7},
+  {Region: 'Auvergne-Rhone-Alpes', Age: '26-50', salaryhours: 14.0},
+  {Region: 'Auvergne-Rhone-Alpes', Age: '>50', salaryhours: 16.5},
+  {Region: "Provence-Alpes-Cote d'Azur", Age: '18-25', salaryhours: 9.6},
+  {Region: "Provence-Alpes-Cote d'Azur", Age: '26-50', salaryhours: 13.8},
+  {Region: "Provence-Alpes-Cote d'Azur", Age: '>50', salaryhours: 16.5},
+  {Region: "Corse", Age: '18-25', salaryhours: 9.5},
+  {Region: "Corse", Age: '26-50', salaryhours: 12.3},
+  {Region: "Corse", Age: '>50', salaryhours: 14.9},
+  {Region: "All", Age: '18-25', salaryhours: 10.1},
+  {Region: "All", Age: '26-50', salaryhours: 14.3},
+  {Region: "All", Age: '>50', salaryhours: 17.2}
+
+]
+
+
+
+
+  // set initial group value
+  var regions = "All";
+
+  function dataBarChosen(regions) {
+    var ds = [];
+    for (x in Age_salary_data) {
+
+       if(Age_salary_data[x].Region==regions){
+        ds.push(Age_salary_data[x]);
+       }
+      }
+    return ds;
+  }
+
+  function BarChartBasics() {
+
+  var margin = {top: 80, right: 5, bottom: 60, left: 60},
+  width = 500 - margin.left - margin.right,
+   height = 280 - margin.top - margin.bottom,
+  colorBar = d3.scaleQuantize()
+                // .range(['#f0f9e8', '#7bccc4', '#bae4bc', "#7bccc4", '#43a2ca', "#0868ac" ]); '#fff5eb',
+                  .range(['#fee6ce', '#fdd0a2', '#fdae6b', '#fd8d3c', '#f16913', '#d94801', '#a63603', '#7f2704' ]);
+  barPadding = 14
+  ;
+
+  return {
+    margin : margin,
+    width : width,
+    height : height,
+    colorBar : colorBar,
+    barPadding : barPadding
+  }
+  ;
+}
+
+// draw the barchart
+function drawBarChart() {
+
+var firstDataBarChart = dataBarChosen(regions);
+
+var basics = BarChartBasics();
+
+var margin = basics.margin,
+  width = basics.width,
+   height = basics.height,
+  colorBar = basics.colorBar,
+  barPadding = basics.barPadding
+  ;
+
+var x_scale = d3.scaleLinear()
+          .domain([0, firstDataBarChart.length])
+          .range([0, width]);
+
+// Create linear y scale
+var y_scale = d3.scaleLinear()
+     .range([height, 0])
+     .domain([0, d3.max(firstDataBarChart, function(d) { return d.salaryhours; })]);
+
+//Create SVG element
+
+var svgbarchart = d3.select("#barchart")
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .attr("id","barChartPlot")
+      ;
+
+var plot = svgbarchart
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+      ;
+
+plot.selectAll("rect")
+     .data(firstDataBarChart)
+     .enter()
+     .append("rect")
+    .attr("x", function(d, i) {
+        return x_scale(i);
+    })
+     .attr("width", width / firstDataBarChart.length - barPadding)
+    .attr("y", function(d) {
+        return y_scale(d.salaryhours);
+    })
+    .attr("height", function(d) {
+        return height-y_scale(d.salaryhours);
+    })
+    .attr("fill", "lightgrey")
+    .attr('stroke', 'black')
+    .attr('stroke-width', '2px')
+    ;
+
+
+// Add y labels to plot
+
+plot.selectAll("text")
+.data(firstDataBarChart)
+.enter()
+.append("text")
+.text(function(d) {
+    return ' €' + d.salaryhours;
+})
+.style('font-family', 'Helvetica')
+.attr("text-anchor", "middle")
+// Set x position to the left edge of each bar plus half the bar width
+.attr("x", function(d, i) {
+    return (i * (width / firstDataBarChart.length)) + ((width / firstDataBarChart.length - barPadding) / 2);
+})
+.attr("y", function(d) {
+    return y_scale(d.salaryhours) - 10;
+})
+.attr("class", "yAxis");
+
+// Add x labels to chart
+
+var xLabels = svgbarchart
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + (margin.top + height)  + ")")
+      ;
+
+xLabels.selectAll("text.xAxis")
+    .data(firstDataBarChart)
+    .enter()
+    .append("text")
+    .style('font-family', 'Helvetica')
+    .text(function(d) { return d.Age;})
+    .attr("text-anchor", "middle")
+    // Set x position to the left edge of each bar plus half the bar width
+             .attr("x", function(d, i) {
+                return (i * (width / firstDataBarChart.length)) + ((width / firstDataBarChart.length - barPadding) / 2);
+             })
+    .attr("y", 15)
+    .attr("class", "xAxis")
+    ;
+
+// Title
+
+svgbarchart.append("text")
+  .attr("x", (width + margin.left + margin.right)/2)
+  .attr("y", 50)
+  .attr("class","title")
+  .attr("text-anchor", "middle")
+  .style('font-family', 'Helvetica')
+  .style('font-weight', 'bold')
+  .text("BY AGE: France")
+  ;
+}
+
+drawBarChart();
+
+/* ** UPDATE CHART ** */
+
+/* updates bar chart on request */
+
+function updateBarChart(regions, colorChosen) {
+
+  var currentDataBarChart = dataBarChosen(regions);
+
+
+  var basics = BarChartBasics();
+
+  var margin = basics.margin,
+    width = basics.width,
+     height = basics.height,
+    colorBar = basics.colorBar,
+    barPadding = basics.barPadding
+    ;
+
+  var 	x_scale_new = d3.scaleLinear()
+    .domain([0, currentDataBarChart.length])
+    .range([0, width])
+    ;
+
+
+  var y_scale_new = d3.scaleLinear()
+      .domain([0, d3.max(currentDataBarChart, function(d) { return d.salaryhours; })])
+      .range([height,0])
+      ;
+
+   var svgbarchart = d3.select("#barchart svg");
+
+   var plot = d3.select("#barChartPlot")
+    .datum(currentDataBarChart)
+     ;
+
+      /* Note that here we only have to select the elements - no more appending! */
+    plot.selectAll("rect")
+      .data(currentDataBarChart)
+      .transition()
+    .duration(750)
+    .attr("x", function(d, i) {
+        return x_scale_new(i);
+    })
+     .attr("width", width / currentDataBarChart.length - barPadding)
+    .attr("y", function(d) {
+        return y_scale_new(d.salaryhours);
+    })
+    .attr("height", function(d) {
+        return height - y_scale_new(d.salaryhours);
+    })
+    .attr("fill", colorChosen);
+
+  plot.selectAll("text.yAxis") // target the text element(s) which has a yAxis class defined
+    .data(currentDataBarChart)
+    .transition()
+    .duration(750)
+     .attr("text-anchor", "middle")
+     .attr("x", function(d, i) {
+        return (i * (width / currentDataBarChart.length)) + ((width / currentDataBarChart.length - barPadding) / 2);
+     })
+     .attr("y", function(d) {
+        return y_scale_new(d.salaryhours) - 10;
+     })
+     .text(function(d) {
+      return ' €' + d.salaryhours ;
+     })
+     .style('font-family', 'Helvetica')
+     .attr("class", "yAxis")
+  ;
+
+
+  svgbarchart.selectAll("text.title") // target the text element(s) which has a title class defined
+    .attr("x", (width + margin.left + margin.right)/2)
+    .attr("y", 50)
+    .attr("class","title")
+    .attr("text-anchor", "middle")
+    .style('font-family', 'Helvetica')
+    .style('font-weight', 'bold')
+    .html(" BY AGE: " +  regions)
+  ;
+}
+
+
+var evolution_salary = [
+  {Region: 'Guadeloupe', Year: 2012, salaryhours: 13.2},
+  {Region: 'Guadeloupe', Year: 2013, salaryhours: 13.5},
+  {Region: 'Guadeloupe', Year: 2014, salaryhours: 13.7},
+  {Region: 'Guadeloupe', Year: 2015, salaryhours: 13.8},
+  {Region: 'Martinique', Year: 2012, salaryhours: 13.0},
+  {Region: 'Martinique', Year: 2013, salaryhours: 13.3},
+  {Region: "Martinique", Year: 2014, salaryhours: 13.5},
+  {Region: "Martinique", Year: 2015, salaryhours:13.7},
+  {Region: 'Guyane', Year: 2012, salaryhours: 13.8},
+  {Region: 'Guyane', Year: 2013, salaryhours: 14.2},
+  {Region: 'Guyane', Year: 2014, salaryhours: 14.3},
+  {Region: 'Guyane', Year: 2015, salaryhours: 14.5},
+  {Region: 'Reunion', Year: 2012, salaryhours: 12.5},
+  {Region: 'Reunion', Year: 2013, salaryhours: 12.7},
+  {Region: 'Reunion', Year: 2014, salaryhours: 12.8},
+  {Region: 'Reunion', Year: 2015, salaryhours: 12.8},
+  {Region: 'Ile-de-France', Year: 2012, salaryhours: 17.4},
+  {Region: 'Ile-de-France', Year: 2013, salaryhours: 17.9},
+  {Region: 'Ile-de-France', Year: 2014, salaryhours: 18.2},
+  {Region: 'Ile-de-France', Year: 2015, salaryhours: 18.4},
+  {Region: 'Centre-Val de Loire', Year: 2012, salaryhours: 12.8},
+  {Region: 'Centre-Val de Loire', Year: 2013, salaryhours: 13.2},
+  {Region: 'Centre-Val de Loire', Year: 2014, salaryhours: 13.3},
+  {Region: 'Centre-Val de Loire', Year: 2015, salaryhours: 13.4},
+  {Region: 'Bourgogne-Franche-Comte', Year: 2012, salaryhours: 12.4},
+  {Region: 'Bourgogne-Franche-Comte', Year: 2013, salaryhours: 12.7},
+  {Region: 'Bourgogne-Franche-Comte', Year: 2014, salaryhours: 12.8},
+  {Region: 'Bourgogne-Franche-Comte', Year: 2015, salaryhours: 12.9},
+  {Region: 'Normandie', Year: 2012, salaryhours: 12.8},
+  {Region: 'Normandie', Year: 2013, salaryhours: 13.1},
+  {Region: 'Normandie', Year: 2014, salaryhours: 13.2},
+  {Region: 'Normandie', Year: 2015, salaryhours: 13.3},
+  {Region: 'Hauts-de-France', Year: 2012, salaryhours: 12.8},
+  {Region: 'Hauts-de-France', Year: 2013, salaryhours: 13.2},
+  {Region: 'Hauts-de-France', Year: 2014, salaryhours: 13.3},
+  {Region: 'Hauts-de-France', Year: 2015, salaryhours: 13.4},
+  {Region: 'Grand Est', Year: 2012, salaryhours: 12.7},
+  {Region: 'Grand Est', Year: 2013, salaryhours: 13.0},
+  {Region: 'Grand Est', Year: 2014, salaryhours: 13.2},
+  {Region: 'Grand Est', Year: 2015, salaryhours: 13.3},
+  {Region: 'Pays de la Loire', Year: 2012, salaryhours: 12.4},
+  {Region: 'Pays de la Loire', Year: 2013, salaryhours: 12.8},
+  {Region: 'Pays de la Loire', Year: 2014, salaryhours: 12.9},
+  {Region: 'Pays de la Loire', Year: 2015, salaryhours: 13.1},
+  {Region: 'Bretagne', Year: 2012, salaryhours: 12.3},
+  {Region: 'Bretagne', Year: 2013, salaryhours: 12.7},
+  {Region: 'Bretagne', Year: 2014, salaryhours: 12.8},
+  {Region: 'Bretagne', Year: 2015, salaryhours: 12.9},
+  {Region: 'Nouvelle-Aquitaine', Year: 2012, salaryhours: 12.4},
+  {Region: 'Nouvelle-Aquitaine', Year: 2013, salaryhours: 12.8},
+  {Region: 'Nouvelle-Aquitaine', Year: 2014, salaryhours: 12.9},
+  {Region: 'Nouvelle-Aquitaine', Year: 2015, salaryhours: 13.1},
+  {Region: 'Occitanie', Year: 2012, salaryhours: 12.9},
+  {Region: 'Occitanie', Year: 2013, salaryhours: 13.3},
+  {Region: 'Occitanie', Year: 2014, salaryhours: 13.4},
+  {Region: 'Occitanie', Year: 2015, salaryhours: 13.6},
+  {Region: 'Auvergne-Rhone-Alpes', Year: 2012, salaryhours: 13.3},
+  {Region: 'Auvergne-Rhone-Alpes', Year: 2013, salaryhours: 13.8},
+  {Region: 'Auvergne-Rhone-Alpes', Year: 2014, salaryhours: 14.0},
+  {Region: 'Auvergne-Rhone-Alpes', Year: 2015, salaryhours: 14.1},
+  {Region: "Provence-Alpes-Cote d'Azur", Year: 2012, salaryhours: 13.3},
+  {Region: "Provence-Alpes-Cote d'Azur", Year: 2013, salaryhours: 13.7},
+  {Region: "Provence-Alpes-Cote d'Azur", Year: 2014, salaryhours: 13.9},
+  {Region: "Provence-Alpes-Cote d'Azur", Year: 2015, salaryhours: 14.0},
+  {Region: 'Corse', Year: 2012, salaryhours: 12.0 },
+  {Region: 'Corse', Year: 2013, salaryhours: 12.4 },
+  {Region: 'Corse', Year: 2014, salaryhours: 12.5 },
+  {Region: 'Corse', Year: 2015, salaryhours: 12.6},
+  {Region: 'All', Year: 2012, salaryhours: 13.1},
+  {Region: 'All', Year: 2013, salaryhours: 13.4},
+  {Region: 'All', Year: 2014, salaryhours: 13.6},
+  {Region: 'All', Year: 2015, salaryhours: 13.7}
+
+]
+
+
+// set initial category value
+var regions = "All";
+
+function dataLineChartChosen(regions) {
+	var ds = [];
+	for (x in evolution_salary) {
+		 if(evolution_salary[x].Region==regions){
+		 	ds.push(evolution_salary[x]);
+		 }
+		}
+    console.log(ds)
+	return ds;
+}
+
+function drawLineChartBasics() {
+
+	var margin = {top: 50, right: 10, bottom: 50, left: 50},
+	    width = 500 - margin.left - margin.right,
+	    height = 200 - margin.top - margin.bottom
+	    ;
+
+		return {
+			margin : margin,
+			width : width,
+			height : height
+		}
+		;
+}
+
+function drawLineChart() {
+
+	var firstDataLineChart = dataLineChartChosen(regions);
+
+	var basics = drawLineChartBasics();
+
+	var margin = basics.margin,
+		width = basics.width,
+	   height = basics.height
+		;
+
+	var x_scale = d3.scaleLinear()
+	    .domain([0, firstDataLineChart.length-1])
+	    .range([0, width]);
+
+	var y_scale = d3.scaleLinear()
+  .domain([d3.min(firstDataLineChart, function(d) { return d.salaryhours}), d3.max(firstDataLineChart, function(d) { return d.salaryhours; }) ])
+  .range([height, 0])
+
+
+
+	var line = d3.line()
+	    .x(function(d, i) { console.log(x_scale(i)); return x_scale(i); })
+	    .y(function(d) { console.log(y_scale(d.salaryhours)); return y_scale(d.salaryhours); })
+	    ;
+
+	var svgLinechart = d3.select("#linechart").append("svg")
+	    .datum(firstDataLineChart)
+	    .attr("width", width + margin.left + margin.right)
+	    .attr("height", height + margin.top + margin.bottom)
+
+
+
+	var plot = svgLinechart
+	    .append("g")
+	    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+	    .attr("id", "lineChartPlot");
+
+
+		/* descriptive titles as part of plot -- start */
+	var dsLength=firstDataLineChart.length;
+
+
+  plot.append("text")
+    .data(firstDataLineChart)
+    .html(function(d) {
+      return firstDataLineChart[dsLength-1].Year + ' :' + '<br>' + ' €' + firstDataLineChart[dsLength-1].salaryhours
+    })
+    .attr("id","lineChartTitle2")
+    .attr('font-family', 'Helvetica')
+    .attr("x",width - 80)
+    .attr("y",height/2)
+    .attr('dy', '.5em');
+
+    plot.append("text")
+      .data(firstDataLineChart)
+      .html(function(d) {
+        return firstDataLineChart[dsLength-4].Year + ' :' + '<br>' + ' €' + firstDataLineChart[dsLength-4].salaryhours
+      })
+      .attr("id","lineChartTitle3")
+      .attr('font-family', 'Helvetica')
+      .attr("x",width - 450)
+      .attr("y",height/2)
+      .attr('dy', '-.6em');
+
+
+	plot.append("path")
+	    .attr("class", "line")
+	    .attr("d", line)
+      .attr('fill', 'none')
+  		.attr("stroke", "lightgrey")
+      .attr('stroke-width', '.3em');
+
+
+
+	plot.append('g').selectAll(".dot")
+	    .data(firstDataLineChart)
+	  	 .enter().append("circle")
+	    .attr("class", "dot")
+	    //.attr("stroke", function (d) { return d.measure==datasetMeasureMin ? "red" : (d.measure==datasetMeasureMax ? "green" : "steelblue") } )
+	    .attr("fill", function (d) { return d.salaryhours==d3.min(firstDataLineChart, function(d) { return d.salaryhours; }) ? "black" : (d.salaryhours==d3.max(firstDataLineChart, function(d) { return d.salaryhours; }) ? "black" : "white") } )
+	    //.attr("stroke-width", function (d) { return d.measure==datasetMeasureMin || d.measure==datasetMeasureMax ? "3px" : "1.5px"} )
+	    .attr("cx", line.x())
+	    .attr("cy", line.y())
+	    .attr("r", 6.5)
+	    .attr("stroke", "black")
+  	    .append("title")
+  	    .text(function(d) { return 'In ' + d.Year + " the hourly salary was €" + d.salaryhours; });
+
+
+
+
+	svgLinechart.append("text")
+		.text("2012-2015: France")
+    .style('font-family', 'Helvetica')
+		.attr("id","lineChartTitle1")
+    .attr("class","title")
+    .style('font-weight', 'bold')
+		// .attr("x",margin.left + ((width + margin.right)/2))
+    .attr("x", (width + margin.left + margin.right)/2)
+		.attr("y", 20)
+    // .attr('dx', '-10em')
+    .attr("text-anchor", "middle");
+
+
+}
+
+drawLineChart();
+
+
+ /* ** UPDATE CHART ** */
+
+/* updates bar chart on request */
+function updateLineChart(regions, colorChosen) {
+
+	var currentDataLineChart = dataLineChartChosen(regions);
+  console.log(currentDataLineChart);
+
+	var basics = drawLineChartBasics();
+
+	var margin = basics.margin,
+		width = basics.width,
+	   height = basics.height
+		;
+
+
+
+	var x_scale_new = d3.scaleLinear()
+	    .domain([0, currentDataLineChart.length-1])
+	    .range([0, width])
+	    ;
+
+	var y_scale_new = d3.scaleLinear()
+	    // .domain([0, d3.max(currentDataLineChart, function(d) { return d.salaryhours; })])
+      .domain([d3.min(currentDataLineChart, function(d) { return d.salaryhours}), d3.max(currentDataLineChart, function(d) { return d.salaryhours; }) ])
+	    .range([height, 0])
+	    ;
+
+	var line = d3.line()
+    .x(function(d, i) { console.log(x_scale_new(i)); return x_scale_new(i); })
+    .y(function(d) { return y_scale_new(d.salaryhours); })
+    ;
+
+   var plot = d3.select("#lineChartPlot")
+   	.datum(currentDataLineChart)
+	   ;
+
+	/* descriptive titles as part of plot -- start */
+	var dsLength=currentDataLineChart.length;
+
+	// plot.select("#lineChartTitle2 ")
+	// 	.text(currentDataLineChart[dsLength-1].salaryhours + ' €');
+  //
+  // plot.select("#lineChartTitle2")
+	// 	.text(currentDataLineChart[dsLength-4].salaryhours);
+
+  plot.select("text#lineChartTitle2")
+    .data(currentDataLineChart)
+    .html(function(d) {
+      return currentDataLineChart[dsLength-1].Year + ' :' + '<br>' + ' €' + currentDataLineChart[dsLength-1].salaryhours
+    })
+    .attr("id","lineChartTitle2")
+    .attr('font-family', 'Helvetica')
+    .attr("x",width - 80)
+    .attr("y",height/2)
+    .attr('dy', '.5em');
+
+    plot.select("text#lineChartTitle3")
+      .data(currentDataLineChart)
+      .html(function(d) {
+        return currentDataLineChart[dsLength-4].Year + ' :' + '<br>' +  ' €' + currentDataLineChart[dsLength-4].salaryhours
+      })
+      .attr("id","lineChartTitle3")
+      .attr('font-family', 'Helvetica')
+      .attr("x",width - 450)
+      .attr("y",height/2)
+      .attr('dy', '-.6em');
+
+
+	plot
+	.select("path")
+		.transition()
+		.duration(750)
+	   .attr("class", "line")
+	   .attr("d", line)
+		.attr("stroke", colorChosen)
+    .attr('fill', 'none')
+	   ;
+
+	var path = plot
+		.selectAll(".dot")
+	   .data(currentDataLineChart)
+	   .transition()
+		.duration(750)
+	   .attr("class", "dot")
+	   .attr("fill", function (d) { return d.salaryhours==d3.min(currentDataLineChart, function(d) { return d.salaryhours; }) ? "black" : (d.salaryhours==d3.max(currentDataLineChart, function(d) { return d.salaryhours; }) ? "black" : "white") } )
+	   .attr("cx", line.x())
+	   .attr("cy", line.y())
+	   .attr("r", 6.5)
+		.attr("stroke", colorChosen);
+
+	   path
+	   .selectAll("#lineChartTitle2")
+	   .text(function(d) { return 'In ' + d.Year + " the hourly salary was €" + d.salaryhours; });
+
+
+ var svgLinechart = d3.select("#linechart svg");
+
+  svgLinechart.selectAll("text#lineChartTitle1")
+      .text("2012-2015: " + regions)
+      .style('font-weight', 'bold')
+      .style('font-family', 'Helvetica')
+      .attr("id","lineChartTitle1")
+      .attr("x", (width + margin.left + margin.right)/2)
+      .attr("y", 20)
+      .attr("text-anchor", "middle");
+
+
+}
+
+
+var salary_difference = [
+  {Region: 'Guadeloupe', sexe: 'women', salaryhours: 13.0},
+  {Region: 'Guadeloupe', sexe: 'men', salaryhours: 14.6},
+  {Region: 'Martinique', sexe: 'women', salaryhours: 12.8},
+  {Region: 'Martinique', sexe: 'men', salaryhours: 14.4},
+  {Region: 'Guyane', sexe: 'women', salaryhours: 13.5},
+  {Region: 'Guyane', sexe: 'men', salaryhours: 15.1},
+  {Region: 'Reunion', sexe: 'women', salaryhours: 12.2},
+  {Region: 'Reunion', sexe: 'men', salaryhours: 13.2},
+  {Region: 'Ile-de-France', sexe: 'women', salaryhours: 16.4},
+  {Region: 'Ile-de-France', sexe: 'men', salaryhours: 19.9},
+  {Region: 'Centre-Val de Loire', sexe: 'women', salaryhours: 12.0},
+  {Region: 'Centre-Val de Loire', sexe: 'men', salaryhours: 14.4},
+  {Region: 'Bourgogne-Franche-Comte', sexe: 'women', salaryhours: 11.5},
+  {Region: 'Bourgogne-Franche-Comte', sexe: 'men', salaryhours: 13.9},
+  {Region: 'Normandie', sexe: 'women', salaryhours: 11.8},
+  {Region: 'Normandie', sexe: 'men', salaryhours: 14.3},
+  {Region: 'Hauts-de-France', sexe: 'women', salaryhours: 11.9},
+  {Region: 'Hauts-de-France', sexe: 'men', salaryhours: 14.3},
+  {Region: 'Grand Est', sexe: 'women', salaryhours: 11.7},
+  {Region: 'Grand Est', sexe: 'men', salaryhours: 14.4},
+  {Region: 'Pays de la Loire', sexe: 'women', salaryhours: 11.6},
+  {Region: 'Pays de la Loire', sexe: 'men', salaryhours: 14.1},
+  {Region: 'Bretagne', sexe: 'women', salaryhours: 11.5},
+  {Region: 'Bretagne', sexe: 'men', salaryhours: 13.9},
+  {Region: 'Nouvelle-Aquitaine', sexe: 'women', salaryhours: 11.8},
+  {Region: 'Nouvelle-Aquitaine', sexe: 'men', salaryhours: 14.0},
+  {Region: 'Occitanie', sexe: 'women', salaryhours: 12.0},
+  {Region: 'Occitanie', sexe: 'men', salaryhours: 14.7},
+  {Region: 'Auvergne-Rhone-Alpes', sexe: 'women', salaryhours: 12.4},
+  {Region: 'Auvergne-Rhone-Alpes', sexe: 'men', salaryhours: 15.3},
+  {Region: "Provence-Alpes-Cote d'Azur", sexe: 'women', salaryhours: 12.3},
+  {Region: "Provence-Alpes-Cote d'Azur", sexe: 'men', salaryhours: 15.2},
+  {Region: "Corse", sexe: 'women', salaryhours: 11.5},
+  {Region: "Corse", sexe: 'men', salaryhours: 13.5},
+  {Region: "All", sexe: 'women', salaryhours: 12.4},
+  {Region: "All", sexe: 'men', salaryhours: 13.7}
+
+]
+
+// set initial group value
+var regions = "All";
+
+function dataBar_2Chosen(regions) {
+  var draw = [];
+  for (y in salary_difference) {
+
+     if(salary_difference[y].Region==regions){
+      draw
+      .push(salary_difference[y]);
+     }
+    }
+  return draw;
+}
+
+function BarChartBasics_2() {
+
+var margin = {top: 50, right: 5, bottom: 80, left: 50},
+width = 500 - margin.left - margin.right,
+ height = 250 - margin.top - margin.bottom,
+colorBar = d3.scaleQuantize()
+              .range(['#f0f9e8', '#7bccc4', '#bae4bc', "#7bccc4", '#43a2ca', "#0868ac" ]);
+barPadding = 60
+;
+
+return {
+  margin : margin,
+  width : width,
+  height : height,
+  colorBar : colorBar,
+  barPadding : barPadding
+}
+;
+}
+
+// draw the barchart
+function drawBarChart_2() {
+
+var firstDataBarChart_2 = dataBar_2Chosen(regions);
+
+var basics_2 = BarChartBasics_2();
+
+var margin = basics_2.margin,
+width = basics_2.width,
+ height = basics_2.height,
+colorBar = basics_2.colorBar,
+barPadding = basics_2.barPadding
+;
+
+var x_scale_2 = d3.scaleLinear()
+        .domain([0, firstDataBarChart_2.length])
+        .range([0, width]);
+
+// Create linear y scale
+var y_scale_2 = d3.scaleLinear()
+   .range([height, 0])
+   .domain([0, d3.max(firstDataBarChart_2, function(d) { return d.salaryhours; })]);
+
+//Create SVG element
+
+var svgbarchart_2 = d3.select("#barchart_2")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr("id","barChartPlot_2")
+    ;
+
+var plot_2 = svgbarchart_2
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    ;
+
+plot_2.selectAll("rect")
+   .data(firstDataBarChart_2)
+   .enter()
+   .append("rect")
+  .attr("x", function(d, i) {
+      return x_scale_2(i);
+  })
+   .attr("width", width / firstDataBarChart_2.length - barPadding)
+  .attr("y", function(d) {
+      return y_scale_2(d.salaryhours);
+  })
+  .attr("height", function(d) {
+      return height-y_scale_2(d.salaryhours);
+  })
+  .attr("fill", "lightgrey")
+  .attr('stroke', 'black')
+  .attr('stroke-width', '2px')
+  ;
+
+
+// Add y labels to plot
+
+plot_2.selectAll("text")
+.data(firstDataBarChart_2)
+.enter()
+.append("text")
+.text(function(d) {
+  return ' €' + d.salaryhours;
+})
+.style('font-family', 'Helvetica')
+.attr("text-anchor", "middle")
+// Set x position to the left edge of each bar plus half the bar width
+.attr("x", function(d, i) {
+  return (i * (width / firstDataBarChart_2.length)) + ((width / firstDataBarChart_2.length - barPadding) / 2);
+})
+.attr("y", function(d) {
+  return y_scale_2(d.salaryhours)  - 10;
+})
+.attr("class", "y_Axis");
+
+// Add x labels to chart
+
+var xLabels_2 = svgbarchart_2
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + (margin.top + height)  + ")")
+    ;
+
+xLabels_2.selectAll("text.x_Axis")
+  .data(firstDataBarChart_2)
+  .enter()
+  .append("text")
+  .style('font-family', 'Helvetica')
+  .text(function(d) { return d.sexe;})
+  .attr("text-anchor", "middle")
+  // Set x position to the left edge of each bar plus half the bar width
+           .attr("x", function(d, i) {
+              return (i * (width / firstDataBarChart_2.length)) + ((width / firstDataBarChart_2.length - barPadding) / 2);
+           })
+  .attr("y", 15)
+  .attr("class", "x_Axis")
+  ;
+
+// Title
+
+svgbarchart_2.append("text")
+.attr("x", (width + margin.left + margin.right)/2)
+.attr("y", 15)
+.attr("class","title")
+.style('font-weight', 'bold')
+.attr("text-anchor", "middle")
+.style('font-family', 'Helvetica')
+.text("BY GENDER: France")
+;
+}
+
+drawBarChart_2();
+
+/* ** UPDATE CHART ** */
+
+/* updates bar chart on request */
+
+function updateBarChart_2(regions, colorChosen) {
+
+var currentDataBarChart_2 = dataBar_2Chosen(regions);
+console.log(dataBar_2Chosen(regions));
+console.log(colorChosen);
+
+var basics_2 = BarChartBasics_2();
+
+var margin = basics_2.margin,
+  width = basics_2.width,
+   height = basics_2.height,
+  colorBar = basics_2.colorBar,
+  barPadding = basics_2.barPadding
+  ;
+
+var 	x_scale_new_2 = d3.scaleLinear()
+  .domain([0, currentDataBarChart_2.length])
+  .range([0, width])
+  ;
+
+
+var y_scale_new_2 = d3.scaleLinear()
+    .domain([0, d3.max(currentDataBarChart_2, function(d) { return d.salaryhours; })])
+    .range([height,0])
+    ;
+
+ var svgbarchart_2 = d3.select("#barchart_2 svg");
+
+ var plot_2 = d3.select("#barChartPlot_2")
+  .datum(currentDataBarChart_2)
+   ;
+
+    /* Note that here we only have to select the elements - no more appending! */
+  plot_2.selectAll("rect")
+    .data(currentDataBarChart_2)
+    .transition()
+  .duration(750)
+  .attr("x", function(d, i) {
+      return x_scale_new_2(i);
+  })
+   .attr("width", width / currentDataBarChart_2.length - barPadding)
+  .attr("y", function(d) {
+      return y_scale_new_2(d.salaryhours);
+  })
+  .attr("height", function(d) {
+      return height - y_scale_new_2(d.salaryhours);
+  })
+  .attr("fill", colorChosen);
+
+plot_2.selectAll("text.y_Axis") // target the text element(s) which has a yAxis class defined
+  .data(currentDataBarChart_2)
+  .transition()
+  .duration(750)
+   .attr("text-anchor", "middle")
+   .attr("x", function(d, i) {
+      return (i * (width / currentDataBarChart_2.length)) + ((width / currentDataBarChart_2.length - barPadding) / 2);
+   })
+   .attr("y", function(d) {
+      return y_scale_new_2(d.salaryhours) - 10;
+   })
+   .text(function(d) {
+    return ' €' + d.salaryhours;
+   })
+   .style('font-family', 'Helvetica')
+   .attr("class", "y_Axis")
+;
+
+
+svgbarchart_2.selectAll("text.title") // target the text element(s) which has a title class defined
+  .attr("x", (width + margin.left + margin.right)/2)
+  .attr("y", 15)
+  .attr("class","title")
+  .attr("text-anchor", "middle")
+  .style('font-weight', 'bold')
+  .style('font-family', 'Helvetica')
+  .html("BY GENDER: " + regions)
+;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+
+  </body>
+</html>

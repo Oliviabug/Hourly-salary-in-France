@@ -1,0 +1,55 @@
+Region,Age,salaryhours
+Guadeloupe,18-25,9.0
+Guadeloupe,26-50,13.3
+Guadeloupe,>50,16.3
+Martinique,18-25,9.1
+Martinique,26-50,13.2
+Martinique,>50,15.7
+Guyane,18-25,9.5
+Guyane,26-50,14.0
+Guyane,>50,18.3
+La Reunion,18-25,8.8
+La Reunion,26-50,12.7
+La Reunion,>50,15.8
+Ile-de-France,18-25,10.5
+Ile-de-France,26-50,18.0
+Ile-de-France,>50,22.7
+Centre-Val de Loire,18-25,9.6
+Centre-Val de Loire,26-50,13.3
+Centre-Val de Loire,>50,15.5
+Bourgogne-Franche-Comte,18-25,9.5
+Bourgogne-Franche-Comte,26-50,12.8
+Bourgogne-Franche-Comte,>50,14.8
+Normandie,18-25,9.6
+Normandie,26-50,13.2
+Normandie,>50,15.5
+Hauts-de-France,18-25,9.6
+Hauts-de-France,26-50,13.3
+Hauts-de-France,>50,15.6
+Grand Est,18-25,9.5
+Grand Est,26-50,13.1
+Grand Est,>50,15.4
+Pays de la Loire,18-25,9.4
+Pays de la Loire,26-50,13.0
+Pays de la Loire,>50,15.1
+Bretagne,18-25,9.4
+Bretagne,26-50,12.8
+Bretagne,>50,14.9
+Nouvelle-Aquitaine,18-25,9.4
+Nouvelle-Aquitaine,26-50,12.9
+Nouvelle-Aquitaine,>50,15.2
+Occitanie,18-25,9.4
+Occitanie,26-50,13.3
+Occitanie,>50,16.0
+Auvergne-Rhone-Alpes,18-25,9.7
+Auvergne-Rhone-Alpes,26-50,14.0
+Auvergne-Rhone-Alpes,>50,16.5
+Provence-Alpes-Cote d'Azur,18-25,9.6
+Provence-Alpes-Cote d'Azur,26-50,13.8
+Provence-Alpes-Cote d'Azur,>50,16.5
+Corse,18-25,9.5
+Corse,26-50,12.3
+Corse,>50,14.9
+All,18-25,10.1
+All,26-50,14.3
+All,>50,17.2
